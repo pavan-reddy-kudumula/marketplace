@@ -52,6 +52,3 @@ next-env.d.ts
 
 # Generated files
 /app/generated/prisma
-
-# prisma
-prisma.config.ts
