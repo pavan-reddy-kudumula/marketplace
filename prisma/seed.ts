@@ -33,7 +33,7 @@ async function main() {
                                 price: parseInt(faker.commerce.price({ min: 1000, max: 5000 })),
                                 description: faker.commerce.productDescription(),
                                 category: productCategory,
-                                images: [faker.image.url()]
+                                images: [faker.image.url({width: 300, height: 300})]
                             }))
                         }
                     }
