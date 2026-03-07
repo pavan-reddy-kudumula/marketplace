@@ -3,15 +3,23 @@
 import { useCart } from "@/store/cart";
 import { useRouter } from "next/navigation";
 import { Product, Store } from "@prisma/client";
-import React from "react";
+import { useState, useEffect } from "react";
 
 type ProductpageProps = Product & { store: Store }  
 
 export default function ProductPage({ products }: { products: ProductpageProps[] }) {
   const addItem = useCart((state) => state.addItem);
   const removeItem = useCart((state) => state.removeItem);
-  const clearCart = useCart((state) => state.clearCart);
+  const items = useCart((state) => state.items);
+  const [productQuantities, setProductQuantities] = useState<Record<string, number>>({})
+    
   const router = useRouter();
+
+  useEffect(() => {
+      setProductQuantities(Object.fromEntries(
+          items.map((item) => [item.id, item.quantity])
+      ))
+  }, [items])
 
   function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -29,7 +37,7 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-100 py-8 px-4">
       <form
         onSubmit={handleSubmit}
         className="max-w-[1600px] mx-auto mb-8"
@@ -47,7 +55,7 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
               type="text"
               name="category"
               placeholder="e.g. Tech"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             />
           </div>
           <div className="flex-1">
@@ -62,12 +70,12 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
               type="text"
               name="product"
               placeholder="Search products"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             />
           </div>
           <button
             type="submit"
-            className="h-10 sm:h-[42px] rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-blue-700"
+            className="h-10 sm:h-[42px] rounded-lg bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-indigo-700"
           >
             Search
           </button>
@@ -78,12 +86,6 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
           <h1 className="font-bold text-4xl text-gray-800 tracking-tight">
             Products
           </h1>
-          <button 
-            onClick={() => clearCart()}
-            className="bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors duration-200 shadow-md"
-          >
-            Clear Cart
-          </button>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 max-w-[1600px] mx-auto">
@@ -126,24 +128,41 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
                 {product.description}
               </p>
               <div className="pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-2xl font-bold text-blue-600">
+                <div className="flex gap-2 items-center justify-between mb-3">
+                  <span className="text-2xl font-bold text-indigo-600">
                     ${(product.price / 100).toFixed(2)}
                   </span>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors duration-200 shadow-sm"
-                    onClick={() => addItem(product)}
-                  >
-                    Add to cart
-                  </button>
-                  <button 
-                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors duration-200 shadow-sm"
-                    onClick={() => removeItem(product.id)}
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center rounded-lg border border-indigo-300 bg-transparent p-1">
+                    {(productQuantities[product.id] ?? 0) > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="h-8 w-8 rounded-md bg-transparent text-lg font-bold leading-none text-indigo-700 transition-colors duration-200 hover:bg-indigo-50"
+                          onClick={() => removeItem(product.id)}
+                        >
+                          -
+                        </button>
+                        <p className="min-w-6 text-center text-sm font-bold text-indigo-700">
+                          {productQuantities[product.id]}
+                        </p>
+                        <button
+                          type="button"
+                          className="h-8 w-8 rounded-md bg-transparent text-lg font-bold leading-none text-indigo-700 transition-colors duration-200 hover:bg-indigo-50"
+                          onClick={() => addItem(product)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rounded-md bg-transparent px-4 py-1.5 text-sm font-semibold text-indigo-700 transition-colors duration-200 hover:bg-indigo-50"
+                        onClick={() => addItem(product)}
+                      >
+                        Add
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
