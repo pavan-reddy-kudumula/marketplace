@@ -21,62 +21,90 @@ enum UserRole {
 }
 
 model User {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  name String?
-  email String @unique
-  image String?
-  role UserRole @default(USER)
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String?
+  email     String   @unique
+  image     String?
+  role      UserRole @default(USER)
 
-  store Store?
-  orders Order[]
+  stores    Store[]
+  orders    Order[]
+  reviews   Review[] // Added for product reviews
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Store {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  name String
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  isArchived Boolean  @default(false)
   
-  userId String @unique @db.ObjectId
-  user User @relation(fields: [userId], references: [id])
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id])
 
-  products Product[]
+  products   Product[]
+  orders     Order[]  // Added so the store can see its specific orders
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Product {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  name String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
   description String
-  price Int
-  images String[]
-  category String
+  price       Int
+  stock       Int      @default(0) // Added for inventory management
+  images      String[]
+  category    String
+  attributes  Json?    // Added for flexible variants (sizes, colors, etc.)
+  isArchived  Boolean  @default(false)
 
-  storeId String @db.ObjectId
-  store Store @relation(fields: [storeId], references: [id])
+  storeId     String   @db.ObjectId
+  store       Store    @relation(fields: [storeId], references: [id])
  
-  orderItems OrderItem[]
+  orderItems  OrderItem[]
+  reviews     Review[] // Added for product reviews
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  rating    Int      // 1 to 5
+  comment   String?  
+  
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId]) // A user can only review a specific product once
 }
 
 model Order {
   id         String      @id @default(auto()) @map("_id") @db.ObjectId
   isPaid     Boolean     @default(false)
-  status     OrderStatus @default(PENDING) // Track fulfillment
+  status     OrderStatus @default(PENDING) // Now tracks fulfillment per store
   
   phone      String      @default("")
   address    String      @default("")
-  paymentId  String?     // Stripe/PayPal ID
+  paymentId  String?     // Stripe/PayPal ID (Will be shared across split orders)
   
-  totalPrice Int         
-  
+  totalPrice Int         // Total price for THIS store's portion of the cart
+  storeName  String      // snapshot storeName if store name changes
+
   userId     String      @db.ObjectId
   user       User        @relation(fields: [userId], references: [id])
+
+  storeId    String      @db.ObjectId // Crucial fix: Ties the order to a specific store
+  store      Store       @relation(fields: [storeId], references: [id])
   
   orderItems OrderItem[]
   
@@ -87,8 +115,9 @@ model Order {
 model OrderItem {
   id        String  @id @default(auto()) @map("_id") @db.ObjectId
   
-  quantity  Int     @default(1)
-  price     Int     // Snapshot of price at time of order
+  quantity    Int    @default(1)
+  price       Int    // Snapshot of price at time of order
+  productName String // Snapshot of product name at time of order
 
   orderId   String  @db.ObjectId
   order     Order   @relation(fields: [orderId], references: [id])

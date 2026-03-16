@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma"
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [GitHub],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      console.log('SignIn callback triggered', { user, account, profile });
+    async signIn({ user }) {
+      console.log('SignIn callback triggered', { user });
       
       if (!user.email) {
         console.error('No email provided by OAuth provider');
@@ -38,6 +38,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         console.error('Error in signIn callback:', error);
         return false;
       }
+    },
+    async jwt({ token, user }) {
+      if (user?.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { id: true },
+        });
+
+        if (dbUser) {
+          token.userId = dbUser.id;
+        }
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.userId) {
+        session.user.id = token.userId as string;
+      }
+
+      return session;
     }
   }
 })
