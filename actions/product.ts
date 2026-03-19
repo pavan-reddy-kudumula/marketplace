@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { UserRole } from "@prisma/client";
 import { JsonValue } from "@prisma/client/runtime/library";
+import { revalidatePath } from "next/cache";
 
 interface ProductType {
   name: string;
@@ -43,14 +44,17 @@ export async function getProducts({ category, search }: SearchParams) {
         name: true,
         price: true,
         images: true,
+        category: true,
+        description: true,
+        stock: true,
         store: {
           select: {
-            name: true,
-          },
-        },
+            name: true
+          }
+        }
       },
     });
-    return products;
+    return { data: products, error: null };
   } catch (error) {
     console.error("Error in getProducts: ", error);
     return { data: null, error: "An Unexpected error occured" };

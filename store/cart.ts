@@ -2,7 +2,17 @@ import { Product, Store } from "@prisma/client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-type ProductWithStore = Product & { store: Store};
+interface ProductWithStore {
+  id: string
+  name: string
+  price: number
+  images: string[]
+  category: string
+  description: string
+  store: {
+    name: string
+  }
+}
 
 interface CartItem extends ProductWithStore{
   quantity: number;

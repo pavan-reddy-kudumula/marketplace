@@ -22,11 +22,11 @@ export default function CartPage() {
     setLoading(true);
     setError(null);
     try {
-      const orderId = await CheckOut(
+      const orderIds = await CheckOut(
         items.map((item) => ({ id: item.id, quantity: item.quantity }))
       );
       clearCart();
-      router.push(`/orders/${orderId}`);
+      router.push(orderIds.length === 1 ? `/orders/${orderIds[0]}` : "/orders");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Checkout failed. Please try again.");
     } finally {

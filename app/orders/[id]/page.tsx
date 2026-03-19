@@ -105,7 +105,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                             )}
                             <div className="flex-1 min-w-0">
                                 <p className="font-medium">{item.product.name}</p>
-                                <p className="text-sm text-gray-500 mt-0.5">{item.product.store.name}</p>
+                                <p className="text-sm text-gray-500 mt-0.5">{order.store.name}</p>
                                 <p className="text-sm text-gray-500">{item.product.category}</p>
                                 <p className="text-sm text-gray-500 mt-1">Qty: {item.quantity}</p>
                             </div>

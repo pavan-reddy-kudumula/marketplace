@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 
 export async function getStore(id: string) {
@@ -79,6 +80,7 @@ export async function createStore(name: string) {
       }),
     ]);
 
+    revalidatePath("/profile")
     return { success: true, error: null };
   } catch (error: any) {
     if (error?.code === 11000) {
@@ -128,9 +130,10 @@ export async function updateStore(name: string) {
       },
     });
 
+    revalidatePath("/profile")
     return { success: true, error: null };
   } catch (error) {
-    console.error("error in updateStore", error);
+    console.error("error in updateStore", error instanceof Error ? error.message : String(error));
     return { success: false, error: "Something went wrong" };
   }
 }
@@ -178,6 +181,7 @@ export async function deleteStore() {
       }),
     ]);
 
+    revalidatePath("/profile")
     return { success: true, error: null };
   } catch (error) {
     console.error("error in deleteStore", error);
