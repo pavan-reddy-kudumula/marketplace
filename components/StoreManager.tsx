@@ -3,6 +3,7 @@
 import { SubmitEvent, useState } from 'react';
 import { createStore, updateStore, deleteStore } from '@/actions/store';
 import ConfirmModal from '@/components/ConfirmModal';
+import Link from 'next/link';
 
 interface StoreSummary {
   id: string;
@@ -170,12 +171,12 @@ export default function StoreManager({ primaryStore }: StoreManagerProps) {
           </div>
 
           <div className="mt-4 flex gap-4 items-center">
-            <a
+            <Link
               href="/products"
               className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
             >
               Manage Store
-            </a>
+            </Link>
             <button
               onClick={() => setIsDeleteModalOpen(true)}
               disabled={isDeletingStore}
