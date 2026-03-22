@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-
 export async function getStore(id: string) {
   try {
     if(!id.trim()) {

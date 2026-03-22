@@ -1,8 +1,10 @@
 import { getProduct } from "@/actions/product";
 import CartItemControls from "@/components/CartItemControls";
+import { ProductDeleteAction, ProductUpdateAction } from "@/components/ProductActions";
 import ProductImageGallery from "@/components/ProductImageGallery";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
 
 function formatAttributeValue(value: unknown): string {
 	if (typeof value === "string") return value;
@@ -21,6 +23,39 @@ function formatAttributeValue(value: unknown): string {
 	return JSON.stringify(value);
 }
 
+function normalizeFormAttributes(
+	value: unknown,
+): Record<string, string | string[]> | undefined {
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		return undefined;
+	}
+
+	const normalized: Record<string, string | string[]> = {};
+
+	for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+		if (Array.isArray(raw)) {
+			const values = raw
+				.map((item) =>
+					typeof item === "string" || typeof item === "number" || typeof item === "boolean"
+						? String(item)
+						: "",
+				)
+				.filter(Boolean);
+
+			if (values.length > 0) {
+				normalized[key] = values;
+			}
+			continue;
+		}
+
+		if (typeof raw === "string" || typeof raw === "number" || typeof raw === "boolean") {
+			normalized[key] = String(raw);
+		}
+	}
+
+	return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
 interface ProductDetailPageProps {
 	params: {
 		id: string;
@@ -29,6 +64,12 @@ interface ProductDetailPageProps {
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
 	const { id } = await params;
+	const session = await auth();
+
+	if (!session?.user?.id) {
+		redirect(`/api/auth/signin?callbackUrl=${encodeURIComponent(`/products/${id}`)}`);
+	}
+
 	const result = await getProduct(id);
 
 	if (result.error === "product not found" || result.error === "Invalid product ID") {
@@ -59,6 +100,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 		product.attributes && typeof product.attributes === "object" && !Array.isArray(product.attributes)
 			? Object.entries(product.attributes)
 			: [];
+	const formAttributes = normalizeFormAttributes(product.attributes);
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-100 px-4 py-10">
@@ -67,7 +109,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 					← Back to products
 				</Link>
 
-				<div className="grid gap-8 rounded-2xl bg-white p-6 shadow-md md:grid-cols-2 md:p-8">
+				<div className="grid gap-8 rounded-2xl bg-white p-6 shadow-md md:p-8">
 					<div>
 						<ProductImageGallery images={product.images} productName={product.name} />
 					</div>
@@ -115,6 +157,23 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 								<span className="font-semibold text-gray-800">Store:</span> {product.store.name}
 							</p>
 						</div>
+
+						{product.store.userId === session.user.id && (
+							<div className="mt-4 space-y-3">
+								<ProductUpdateAction
+									id={product.id}
+									storeId={product.storeId}
+									name={product.name}
+									description={product.description}
+									price={product.price}
+									images={product.images}
+									category={product.category}
+									stock={product.stock}
+									attributes={formAttributes}
+								/>
+								<ProductDeleteAction id={product.id} storeId={product.storeId} productName={product.name} />
+							</div>
+						)}
 					</div>
 				</div>
 			</div>
