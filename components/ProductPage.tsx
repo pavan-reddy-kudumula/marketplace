@@ -1,6 +1,5 @@
 "use client";
 
-import CartItemControls from "@/components/CartItemControls";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -134,7 +133,6 @@ export default function ProductPage({ products }: { products: ProductPageProps[]
                   <span className="text-2xl font-bold text-indigo-600">
                     ${(product.price / 100).toFixed(2)}
                   </span>
-                  <CartItemControls product={product} />
                 </div>
               </div>
             </div>

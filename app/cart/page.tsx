@@ -22,11 +22,21 @@ export default function CartPage() {
     setLoading(true);
     setError(null);
     try {
-      const orderIds = await CheckOut(
-        items.map((item) => ({ id: item.id, quantity: item.quantity }))
+      const result = await CheckOut(
+        items.map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+          selectedAttributes: item.selectedAttributes,
+        }))
       );
+
+      if (result.error || !result.data) {
+        setError(result.error ?? "Checkout failed. Please try again.");
+        return;
+      }
+
       clearCart();
-      router.push(orderIds.length === 1 ? `/orders/${orderIds[0]}` : "/orders");
+      router.push(result.data.length === 1 ? `/orders/${result.data[0]}` : "/orders");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Checkout failed. Please try again.");
     } finally {
@@ -86,6 +96,13 @@ export default function CartPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-800 truncate">{item.name}</p>
                   <p className="text-sm text-gray-400">{item.store.name}</p>
+                  {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {Object.entries(item.selectedAttributes)
+                        .map(([key, value]) => `${key.replace(/_/g, " ")}: ${value}`)
+                        .join(", ")}
+                    </p>
+                  )}
                   <p className="text-sm text-indigo-600 font-medium mt-1">
                     ${(item.price / 100).toFixed(2)} each
                   </p>
@@ -104,7 +121,7 @@ export default function CartPage() {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => addItem(item)}
+                    onClick={() => addItem(item, item.selectedAttributes)}
                     className="w-8 h-8 rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold text-lg flex items-center justify-center transition-colors"
                     aria-label="Increase quantity"
                   >

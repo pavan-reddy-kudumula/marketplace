@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 interface CheckOutProps {
   id: string;
   quantity: number;
+  selectedAttributes?: Record<string, string>;
 }
 
 interface CheckOutOptions {
@@ -17,6 +18,18 @@ export default async function CheckOut(
   options?: CheckOutOptions,
 ) {
   try {
+        function formatSelectedAttributes(attributes?: Record<string, string>) {
+          if (!attributes || Object.keys(attributes).length === 0) {
+            return "";
+          }
+
+          const formatted = Object.entries(attributes)
+            .map(([key, value]) => `${key.replace(/_/g, " ")}: ${value}`)
+            .join(", ");
+
+          return formatted ? ` (${formatted})` : "";
+        }
+
     const paymentId = options?.paymentId?.trim() || null;
 
     const session = await auth();
@@ -101,7 +114,7 @@ export default async function CheckOut(
             orderItems: {
               create: storeItems.map((item) => ({
                 productId: item.id,
-                productName: productMap[item.id].name,
+                productName: `${productMap[item.id].name}${formatSelectedAttributes(item.selectedAttributes)}`,
                 price: productMap[item.id].price,
                 quantity: item.quantity,
               })),
