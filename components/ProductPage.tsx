@@ -1,25 +1,23 @@
 "use client";
 
-import { useCart } from "@/store/cart";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Product, Store } from "@prisma/client";
-import { useState, useEffect } from "react";
 
-type ProductpageProps = Product & { store: Store }  
+interface ProductPageProps {
+  id: string
+  name: string
+  price: number
+  images: string[]
+  description: string
+  category: string
+  stock: number
+  store: {
+    name: string
+  }
+}  
 
-export default function ProductPage({ products }: { products: ProductpageProps[] }) {
-  const addItem = useCart((state) => state.addItem);
-  const removeItem = useCart((state) => state.removeItem);
-  const items = useCart((state) => state.items);
-  const [productQuantities, setProductQuantities] = useState<Record<string, number>>({})
-    
+export default function ProductPage({ products }: { products: ProductPageProps[] | null }) {
   const router = useRouter();
-
-  useEffect(() => {
-      setProductQuantities(Object.fromEntries(
-          items.map((item) => [item.id, item.quantity])
-      ))
-  }, [items])
 
   function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -31,9 +29,8 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
     if (category) params.set("category", category);
     if (product) params.set("search", product);
 
-    if (params.toString()) {
-      router.push(`/?${params.toString()}`);
-    }
+    const queryString = params.toString();
+    router.push(queryString ? `/products?${queryString}` : "/products");
   }
   
   return (
@@ -89,25 +86,29 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 max-w-[1600px] mx-auto">
-        {products.map((product) => (
+        {products ? products.map((product) => (
           <div
             key={product.id}
             className="bg-white rounded-2xl overflow-hidden shadow-md flex flex-col"
           >
-            <div className="relative overflow-hidden aspect-square">
-              <img
-                src={product.images[0]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-700 shadow-md">
-                {product.category}
+            <Link href={`/products/${product.id}`} className="block">
+              <div className="relative overflow-hidden aspect-square">
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-700 shadow-md">
+                  {product.category}
+                </div>
               </div>
-            </div>
+            </Link>
             <div className="p-5 flex flex-col flex-grow">
-              <h2 className="font-bold text-lg mb-2 text-gray-800 line-clamp-2 min-h-[3.5rem]">
-                {product.name}
-              </h2>
+              <Link href={`/products/${product.id}`} className="block">
+                <h2 className="font-bold text-lg mb-2 text-gray-800 line-clamp-2 min-h-[3.5rem] hover:text-indigo-700 transition-colors duration-200">
+                  {product.name}
+                </h2>
+              </Link>
               <div className="flex items-center gap-2 mb-3 text-sm text-gray-600">
                 <svg
                   className="w-4 h-4"
@@ -132,42 +133,11 @@ export default function ProductPage({ products }: { products: ProductpageProps[]
                   <span className="text-2xl font-bold text-indigo-600">
                     ${(product.price / 100).toFixed(2)}
                   </span>
-                  <div className="flex items-center rounded-lg border border-indigo-300 bg-transparent p-1">
-                    {(productQuantities[product.id] ?? 0) > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="h-8 w-8 rounded-md bg-transparent text-lg font-bold leading-none text-indigo-700 transition-colors duration-200 hover:bg-indigo-50"
-                          onClick={() => removeItem(product.id)}
-                        >
-                          -
-                        </button>
-                        <p className="min-w-6 text-center text-sm font-bold text-indigo-700">
-                          {productQuantities[product.id]}
-                        </p>
-                        <button
-                          type="button"
-                          className="h-8 w-8 rounded-md bg-transparent text-lg font-bold leading-none text-indigo-700 transition-colors duration-200 hover:bg-indigo-50"
-                          onClick={() => addItem(product)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="rounded-md bg-transparent px-4 py-1.5 text-sm font-semibold text-indigo-700 transition-colors duration-200 hover:bg-indigo-50"
-                        onClick={() => addItem(product)}
-                      >
-                        Add
-                      </button>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
           </div>
-        ))}
+        )) :  <h2> Could Not Fetch Products </h2> }
       </div>
     </div>
   );

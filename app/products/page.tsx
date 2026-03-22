@@ -1,7 +1,5 @@
-import {prisma} from "@/lib/prisma";
+import { getProducts } from "@/actions/product";
 import ProductPage from "@/components/ProductPage";
-import Navbar from "@/components/Navbar";
-import { auth } from "@/auth";
 
 interface HomeProps {
   searchParams: {
@@ -12,27 +10,9 @@ interface HomeProps {
 
 export default async function Home({searchParams}: HomeProps) {
   const {category, search} = await searchParams;
-  const products = await prisma.product.findMany({
-    where: {
-      category: {
-        equals: category,
-        mode: "insensitive"
-      },
-      name: {
-        contains: search,
-        mode: "insensitive"
-      },
-    },
-    include: {
-      store: true
-    }
-  })
-  const session = await auth();
+  const products = await getProducts({category, search});
   
   return (
-    <>
-      <Navbar session={session}/>
-      <ProductPage products={products}/>
-    </>
+    <ProductPage products={products.data}/>
   )
 }

@@ -5,9 +5,7 @@ import { prisma } from "@/lib/prisma"
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [GitHub],
   callbacks: {
-    async signIn({ user }) {
-      console.log('SignIn callback triggered', { user });
-      
+    async signIn({ user }) {      
       if (!user.email) {
         console.error('No email provided by OAuth provider');
         return false;
@@ -21,16 +19,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!existingUser) {
           // Create new user
-          const newUser = await prisma.user.create({
+          await prisma.user.create({
             data: {
               name: user.name,
               email: user.email,
               image: user.image,
             }
           });
-          console.log('New user created:', newUser);
-        } else {
-          console.log('Existing user found:', existingUser);
         }
 
         return true;

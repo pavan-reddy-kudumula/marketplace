@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
+import { revalidatePath } from "next/cache"
 
 interface UpdateUserProps {
     name?: string
@@ -67,6 +68,7 @@ export async function updateUser({name, image}: UpdateUserProps) {
             }
         })
 
+        revalidatePath("/profile")
         return { success: true, error: null}
     } catch (error: any) {
         if(error?.code === "P2025") {
