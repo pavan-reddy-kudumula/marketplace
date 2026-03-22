@@ -21,12 +21,13 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
 
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
     const { id } = await params
-    const order = await getOrderById(id)
-
-    if (!order) {
+    const orderDetails = await getOrderById(id)
+    
+    if (!orderDetails.data || orderDetails.error) {
         notFound()
     }
-
+    
+    const order = orderDetails.data
     const subtotal = order.orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
     return (
@@ -104,8 +105,8 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                                 <div className="h-20 w-20 flex-shrink-0 rounded bg-gray-100" />
                             )}
                             <div className="flex-1 min-w-0">
-                                <p className="font-medium">{item.product.name}</p>
-                                <p className="text-sm text-gray-500 mt-0.5">{order.store.name}</p>
+                                <p className="font-medium">{item.productName}</p>
+                                <p className="text-sm text-gray-500 mt-0.5">{order.storeName}</p>
                                 <p className="text-sm text-gray-500">{item.product.category}</p>
                                 <p className="text-sm text-gray-500 mt-1">Qty: {item.quantity}</p>
                             </div>

@@ -101,6 +101,60 @@ export async function getOrders() {
   }
 }
 
+export async function getPaginatedOrders(page: number = 1, pageSize: number = 10) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { data: null, total: 0, error: "Not Authenticated" };
+    }
+
+    const skip = (page - 1) * pageSize;
+
+    const [user, totalCount] = await Promise.all([
+      prisma.user.findUnique({
+        where: {
+          id: session.user.id,
+        },
+        select: {
+          orders: {
+            select: {
+              id: true,
+              status: true,
+              isPaid: true,
+              totalPrice: true,
+              createdAt: true,
+              _count: { select: { orderItems: true } },
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            skip,
+            take: pageSize,
+          },
+        },
+      }),
+      prisma.order.count({
+        where: {
+          userId: session.user.id,
+        },
+      }),
+    ]);
+
+    if (!user) {
+      return { data: null, total: 0, error: "User does not exist" };
+    }
+
+    return { 
+      data: user.orders, 
+      total: totalCount,
+      error: null 
+    };
+  } catch (error) {
+    console.error("error in getPaginatedOrders:", error);
+    return { data: null, total: 0, error: "An unexpected error occurred" };
+  }
+}
+
 export async function getStoreOrders() {
   try {
     const session = await auth();
