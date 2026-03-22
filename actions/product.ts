@@ -23,6 +23,7 @@ interface SearchParams {
 
 interface UpdateProductProps extends ProductType {
   id: string;
+  storeId: string;
 }
 
 export async function getProducts({ category, search }: SearchParams) {
@@ -49,9 +50,9 @@ export async function getProducts({ category, search }: SearchParams) {
         stock: true,
         store: {
           select: {
-            name: true
-          }
-        }
+            name: true,
+          },
+        },
       },
     });
     return { data: products, error: null };
@@ -76,6 +77,7 @@ export async function getProduct(id: string) {
         store: {
           select: {
             name: true,
+            userId: true,
           },
         },
       },
@@ -101,14 +103,21 @@ export async function createProduct(product: ProductType) {
     if (
       !product.name?.trim() ||
       !product.description?.trim() ||
-      !product.category?.trim() ||
-      !Array.isArray(product.images) ||
-      product.images.length === 0 ||
-      typeof product.price !== "number" ||
-      product.price <= 0 ||
-      (product.stock !== undefined && product.stock < 0)
+      !product.category?.trim()
     ) {
-      return { data: null, error: "Invalid product data" };
+      return {
+        success: false,
+        error: "Name, description, and category are required.",
+      };
+    }
+    if (!Array.isArray(product.images) || product.images.length === 0) {
+      return { success: false, error: "Please upload at least one image." };
+    }
+    if (typeof product.price !== "number" || product.price <= 0) {
+      return { success: false, error: "Price must be greater than zero." };
+    }
+    if (product.stock !== undefined && product.stock < 0) {
+      return { success: false, error: "Stock cannot be negative." };
     }
 
     const user = await prisma.user.findUnique({
@@ -138,7 +147,7 @@ export async function createProduct(product: ProductType) {
       data: {
         name: product.name.trim(),
         description: product.description.trim(),
-        price: Math.round(product.price),
+        price: Math.round(product.price * 100),
         images: product.images,
         category: product.category.trim(),
         storeId: user.stores[0].id,
@@ -147,6 +156,7 @@ export async function createProduct(product: ProductType) {
       },
     });
 
+    revalidatePath("/products");
     return { data: newProduct, error: null };
   } catch (error) {
     console.error("Error in createProduct: ", error);
@@ -161,59 +171,68 @@ export async function updateProduct(productData: UpdateProductProps) {
       return { success: false, error: "Not authenticated" };
     }
 
-    if (!productData.id?.trim()) {
-      return { success: false, error: "Invalid product ID" };
+    if (!productData.id?.trim() || !productData.storeId?.trim()) {
+      return {
+        success: false,
+        error: "Missing product or store identification.",
+      };
     }
-
     if (
       !productData.name?.trim() ||
       !productData.description?.trim() ||
-      !productData.category?.trim() ||
-      !Array.isArray(productData.images) ||
-      productData.images.length === 0 ||
-      typeof productData.price !== "number" ||
-      productData.price <= 0 ||
-      (productData.stock !== undefined && productData.stock < 0)
+      !productData.category?.trim()
     ) {
-      return { success: false, error: "Invalid product data" };
+      return {
+        success: false,
+        error: "Name, description, and category are required.",
+      };
+    }
+    if (!Array.isArray(productData.images) || productData.images.length === 0) {
+      return { success: false, error: "Please upload at least one image." };
+    }
+    if (typeof productData.price !== "number" || productData.price <= 0) {
+      return { success: false, error: "Price must be greater than zero." };
+    }
+    if (productData.stock !== undefined && productData.stock < 0) {
+      return { success: false, error: "Stock cannot be negative." };
     }
 
-    const currentUser = await prisma.user.findUnique({
+    // We check if THIS specific store belongs to the user, and check their role.
+    const storeAuthCheck = await prisma.store.findUnique({
       where: {
-        id: session.user.id,
+        id: productData.storeId,
+        userId: session.user.id,
+        isArchived: false,
       },
       select: {
-        stores: {
-          where: {
-            isArchived: false,
-          },
-          select: {
-            id: true,
-          },
+        id: true,
+        user: {
+          select: { role: true },
         },
-        role: true,
       },
     });
 
-    if (!currentUser) {
-      return { success: false, error: "User does not exist" };
+    if (!storeAuthCheck) {
+      console.warn(`User ${session.user.id} attempted to update product in unowned store ${productData.storeId}`);
+      return { success: false, error: "Store not found or access denied." };
     }
 
-    if (currentUser.stores.length === 0 || currentUser.role !== UserRole.ADMIN) {
-      return { success: false, error: "You do not have a store" };
+    if (storeAuthCheck.user.role !== UserRole.ADMIN) {
+      console.warn(`Non-admin ${session.user.id} attempted to update a product.`);
+      return { success: false, error: "You do not have permission to update products." };
     }
 
-    const { id, ...fields } = productData;
+    const { id, storeId, ...fields } = productData;
 
     await prisma.product.update({
       where: {
         id,
-        storeId: currentUser.stores[0].id,
+        storeId
       },
       data: {
         name: fields.name.trim(),
         description: fields.description.trim(),
-        price: Math.round(fields.price),
+        price: Math.round(fields.price * 100),
         images: fields.images,
         category: fields.category.trim(),
         stock: fields.stock,
@@ -221,6 +240,7 @@ export async function updateProduct(productData: UpdateProductProps) {
       },
     });
 
+    revalidatePath("/products");
     return { success: true, error: null };
   } catch (error) {
     console.error("Error in updateProduct: ", error);
@@ -228,10 +248,10 @@ export async function updateProduct(productData: UpdateProductProps) {
   }
 }
 
-export async function deleteProduct(id: string) {
+export async function deleteProduct(id: string, storeId: string) {
   try {
-    if (!id?.trim()) {
-      return { success: false, error: "Invalid product ID" };
+    if (!id?.trim() || !storeId?.trim()) {
+      return { success: false, error: "Missing required information" };
     }
 
     const session = await auth();
@@ -239,56 +259,48 @@ export async function deleteProduct(id: string) {
       return { success: false, error: "Not authenticated" };
     }
 
-    const currentUser = await prisma.user.findUnique({
+    // QUERY 1: Check ONLY the specific store and user role (Highly optimized)
+    const storeAuthCheck = await prisma.store.findUnique({
       where: {
-        id: session.user.id,
-      },
-      select: {
-        stores: {
-          where: {
-            isArchived: false,
-          },
-          select: {
-            id: true,
-          },
-        },
-        role: true,
-      },
-    });
-
-    if (!currentUser) {
-      return { success: false, error: "User does not exist" };
-    }
-
-    if (currentUser.role !== UserRole.ADMIN) {
-      return { success: false, error: "Not authorized" };
-    }
-
-    if (currentUser.stores.length === 0) {
-      return { success: false, error: "You do not have a store" };
-    }
-
-    const product = await prisma.product.findUnique({
-      where: {
-        id,
-        storeId: currentUser.stores[0].id,
+        id: storeId,
+        userId: session.user.id, // Ensures the user actually owns THIS store
         isArchived: false,
       },
-      select: { id: true },
+      select: {
+        id: true,
+        user: {
+          select: { role: true }, // Only fetch the role, nothing else
+        },
+      },
     });
 
-    if (!product) {
-      return { success: false, error: "Product not found" };
+    // Exact error handling for logging
+    if (!storeAuthCheck) {
+      console.warn(
+        `User ${session.user.id} tried to modify unowned store ${storeId}`,
+      );
+      return { success: false, error: "Store not found or access denied." };
     }
 
+    if (storeAuthCheck.user.role !== UserRole.ADMIN) {
+      console.warn(`Non-admin ${session.user.id} attempted to delete product`);
+      return { success: false, error: "Admin access required." };
+    }
+
+    // QUERY 2: Proceed with the exact update
     await prisma.product.update({
-      where: { id },
+      where: {
+        id: id,
+        storeId: storeId,
+        isArchived: false,
+      },
       data: { isArchived: true },
     });
 
+    revalidatePath("/products");
     return { success: true, error: null };
   } catch (error) {
     console.error("Error in deleteProduct: ", error);
-    return { success: false, error: "An Unexpected error occured" };
+    return { success: false, error: "An unexpected error occurred" };
   }
 }
