@@ -1,6 +1,8 @@
-import { getPaginatedOrders } from "@/actions/order"
+import { getPaginatedOrders, getPaginatedStoreOrders } from "@/actions/order"
 import Link from "next/link"
 import type { ReactNode } from "react";
+import { auth } from "@/auth";
+import { UserRole } from "@prisma/client";
 
 const STATUS_STYLES: Record<string, string> = {
     PENDING:    "bg-yellow-100 text-yellow-800",
@@ -13,8 +15,12 @@ const STATUS_STYLES: Record<string, string> = {
 const PAGE_SIZE = 10;
 
 async function OrdersList({ page }: { page: number }) {
-    const result = await getPaginatedOrders(page, PAGE_SIZE);
-
+    const session = await auth();
+    const isAdmin = session?.user?.role === UserRole.ADMIN;
+    const result = isAdmin ? 
+        await getPaginatedStoreOrders(page, PAGE_SIZE) :
+        await getPaginatedOrders(page, PAGE_SIZE)
+    
     if (result.error) {
         return (
             <div className="text-center py-10 text-red-500">
@@ -31,16 +37,16 @@ async function OrdersList({ page }: { page: number }) {
         return (
             <div className="text-center py-20 text-gray-500">
                 <p className="text-lg">You have no orders yet.</p>
-                <Link href="/products" className="mt-4 inline-block text-blue-600 hover:underline">
+                {!isAdmin && <Link href="/products" className="mt-4 inline-block text-blue-600 hover:underline">
                     Browse products
-                </Link>
+                </Link> }
             </div>
         )
     }
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-10">
-            <h1 className="text-2xl font-bold mb-2">My Orders</h1>
+            <h1 className="text-2xl font-bold mb-2">{isAdmin ? "Store Orders" : "My Orders"}</h1>
             <p className="text-sm text-gray-500 mb-6">Total: {total} orders</p>
 
             <div className="border rounded-lg divide-y overflow-hidden mb-6">
@@ -174,7 +180,7 @@ function PaginationControls({ page, totalPages }: { page: number; totalPages: nu
     );
 }
 
-export default async function UserOrders({
+export default async function Orders({
     searchParams,
 }: {
     searchParams: Promise<{ page?: string }>

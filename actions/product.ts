@@ -40,6 +40,7 @@ export async function getProducts({ category, search }: SearchParams) {
           mode: "insensitive",
         },
       },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         name: true,

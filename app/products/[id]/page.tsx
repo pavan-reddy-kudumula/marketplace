@@ -3,8 +3,9 @@ import CartItemControls from "@/components/CartItemControls";
 import { ProductDeleteAction, ProductUpdateAction } from "@/components/ProductActions";
 import ProductImageGallery from "@/components/ProductImageGallery";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { auth } from "@/auth";
+import { UserRole } from "@prisma/client";
 
 function formatAttributeValue(value: unknown): string {
 	if (typeof value === "string") return value;
@@ -65,13 +66,8 @@ interface ProductDetailPageProps {
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
 	const { id } = await params;
 	const session = await auth();
-
-	if (!session?.user?.id) {
-		redirect(`/api/auth/signin?callbackUrl=${encodeURIComponent(`/products/${id}`)}`);
-	}
-
+	const isAdmin = session?.user?.role === UserRole.ADMIN;
 	const result = await getProduct(id);
-
 	if (result.error === "product not found" || result.error === "Invalid product ID") {
 		notFound();
 	}
@@ -123,9 +119,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
 						<p className="mt-5 text-3xl font-bold text-indigo-600">${(product.price / 100).toFixed(2)}</p>
 
-						<div className="mt-4">
+						{!isAdmin && <div className="mt-4">
 							<CartItemControls product={product} />
-						</div>
+						</div> }
 
 						<div className="mt-6 border-t border-gray-100 pt-6">
 							<h2 className="text-base font-semibold text-gray-800">Description</h2>
@@ -158,7 +154,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 							</p>
 						</div>
 
-						{product.store.userId === session.user.id && (
+						{product.store.userId === session?.user?.id && (
 							<div className="mt-4 space-y-3">
 								<ProductUpdateAction
 									id={product.id}

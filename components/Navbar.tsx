@@ -4,14 +4,15 @@ import { useCart } from "@/store/cart";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
-import { SignIn, SignOut } from "./auth-buttons";
+import { SignIn, SignOut } from "./AuthButtons";
 import { Session } from "next-auth";
 import Image from "next/image";
-import { LogIn, Plus, LogOut, ChevronDown, User } from "lucide-react";
+import { Plus, ChevronDown, User, Settings } from "lucide-react";
 
 export default function Navbar({ session }: { session: Session | null }) {
   const [isMounted, setIsMounted] = useState(false);
   const items = useCart((state) => state.items);
+  const isAdmin = session?.user?.role === "ADMIN";
 
   useEffect(() => {
     setIsMounted(true);
@@ -23,14 +24,20 @@ export default function Navbar({ session }: { session: Session | null }) {
         <Link href="/" className="flex items-center gap-2">
           <div className="text-2xl font-bold text-indigo-600">PixelMarket</div>
         </Link>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <Link
             href="/products"
-            className="text-gray-700 font-medium hover:text-indigo-600 transition-colors"
+            className="navbar-item"
           >
-            Shop
+            Products
           </Link>
-          <Link
+          {isAdmin && <Link
+            href="/store"
+            className="navbar-item"
+          >
+            Store
+          </Link> }
+          {!isAdmin && <Link
             href="/cart"
             className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
@@ -38,16 +45,24 @@ export default function Navbar({ session }: { session: Session | null }) {
             <span className="bg-indigo-600 text-white text-sm font-semibold px-2 py-1 rounded-full">
               {isMounted ? items.length : 0}
             </span>
-          </Link>
+          </Link> }
           {session?.user ? (
             <div className="flex items-center gap-4">
-              {/* Primary Action Button */}
+              {/* Primary Action Button - Admin only, Users see orders */}
+              {isAdmin &&
+                  <Link
+                    href="/create-product"
+                    className="navbar-item"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create Product</span>
+                  </Link>
+              }
               <Link
-                href="/create-product"
-                className="hidden items-center gap-1.5 rounded-full bg-cyan-500/10 px-4 py-1.5 text-sm font-medium text-cyan-400 ring-1 ring-inset ring-cyan-500/20 transition-all hover:bg-cyan-500 hover:text-white md:flex"
+                href="/orders"
+                className="navbar-item"
               >
-                <Plus className="h-4 w-4" />
-                <span>Create</span>
+                <span>{isAdmin ? "Store Orders" : "My Orders"}</span>
               </Link>
 
               <div className="h-6 w-px bg-white/10 mx-2 hidden md:block" />
@@ -90,15 +105,16 @@ export default function Navbar({ session }: { session: Session | null }) {
                         <User className="h-4 w-4" />
                         <span>Profile</span>
                       </Link>
+                      <Link
+                        href="/settings"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span>Settings</span>
+                      </Link>
                     </div>
-                    <div className="p-1">
-                      {/* Assuming SignOut renders a button, we wrap it to style standardly */}
-                      <div className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300 cursor-pointer">
-                        <LogOut className="h-4 w-4" />
-                        <div className="w-full text-left">
-                          <SignOut />
-                        </div>
-                      </div>
+                    <div className="p-1 w-full">
+                      <SignOut />
                     </div>
                   </div>
                 </div>
@@ -110,14 +126,7 @@ export default function Navbar({ session }: { session: Session | null }) {
               <div className="hidden h-5 w-px bg-white/10 md:block" />
 
               {/* The Sign In "Button" Wrapper */}
-              <div className="group flex items-center gap-2 rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-slate-200 ring-1 ring-inset ring-white/10 transition-all hover:bg-slate-700 hover:text-white hover:ring-cyan-500/50 hover:shadow-[0_0_10px_-2px_rgba(6,182,212,0.5)]">
-                <LogIn className="h-4 w-4 text-cyan-500 transition-transform duration-300 group-hover:-translate-x-0.5" />
-
-                {/* NOTE: Ensure your <SignIn /> component renders a button 
-                        with a transparent background or just plain text.
-                    */}
-                <SignIn />
-              </div>
+              <SignIn />
             </div>
           )}
         </div>

@@ -24,6 +24,13 @@ interface CartItemControlsProps {
 export default function CartItemControls({ product }: CartItemControlsProps) {
   const addItem = useCart((state) => state.addItem);
   const removeItem = useCart((state) => state.removeItem);
+  const updateItemStock = useCart((state) => state.updateItemStock);
+
+  useEffect(() => {
+    if (product.id) {
+      updateItemStock(product.id, product.stock);
+    }
+  }, [product.id, product.stock, updateItemStock]);
 
   const attributeOptions = useMemo(() => {
     if (!product.attributes || typeof product.attributes !== "object" || Array.isArray(product.attributes)) {

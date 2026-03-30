@@ -62,45 +62,6 @@ export async function getOrderById(id: string) {
   }
 }
 
-export async function getOrders() {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { data: null, error: "Not Authenticated" };
-    }
-
-    const user = await prisma.user.findUnique({
-      where: {
-        id: session.user.id,
-      },
-      select: {
-        orders: {
-          select: {
-            id: true,
-            status: true,
-            isPaid: true,
-            totalPrice: true,
-            createdAt: true,
-            _count: { select: { orderItems: true } },
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      return { data: null, error: "User does not exist" };
-    }
-
-    return { data: user.orders, error: null };
-  } catch (error) {
-    console.error("error in getOrders:", error);
-    return { data: null, error: "An unexpected error occurred" };
-  }
-}
-
 export async function getPaginatedOrders(page: number = 1, pageSize: number = 10) {
   try {
     const session = await auth();
@@ -155,12 +116,14 @@ export async function getPaginatedOrders(page: number = 1, pageSize: number = 10
   }
 }
 
-export async function getStoreOrders() {
+export async function getPaginatedStoreOrders(page: number = 1, pageSize: number = 10) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return { data: null, error: "Not Authenticated" };
+      return { data: null, total: 0, error: "Not Authenticated" };
     }
+
+    const skip = (page - 1) * pageSize;
 
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -171,33 +134,42 @@ export async function getStoreOrders() {
     });
 
     if (!currentUser) {
-      return { data: null, error: "User does not exist" };
+      return { data: null, total: 0, error: "User does not exist" };
     }
 
     if (currentUser._count.stores === 0) {
-      return { data: null, error: "You do not have a store" };
+      return { data: null, total: 0, error: "You do not have a store" };
     }
 
-    const orders = await prisma.order.findMany({
-      where: {
-        store: { userId: currentUser.id, isArchived: false },
-      },
-      select: {
-        id: true,
-        status: true,
-        isPaid: true,
-        totalPrice: true,
-        createdAt: true,
-        user: { select: { name: true, email: true } },
-        _count: { select: { orderItems: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [orders, totalCount] = await Promise.all([
+      prisma.order.findMany({
+        where: {
+          store: { userId: currentUser.id, isArchived: false },
+        },
+        select: {
+          id: true,
+          status: true,
+          isPaid: true,
+          totalPrice: true,
+          createdAt: true,
+          user: { select: { name: true, email: true } },
+          _count: { select: { orderItems: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+      }),
+      prisma.order.count({
+        where: {
+          store: { userId: currentUser.id, isArchived: false },
+        },
+      }),
+    ]);
 
-    return { data: orders, error: null };
+    return { data: orders, total: totalCount, error: null };
   } catch (error) {
     console.error("error in getStoreOrders:", error);
-    return { data: null, error: "An unexpected error occurred" };
+    return { data: null, total: 0, error: "An unexpected error occurred" };
   }
 }
 

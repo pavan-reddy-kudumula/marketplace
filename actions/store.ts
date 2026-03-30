@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
+
 export async function getStore(id: string) {
   try {
     if(!id.trim()) {
@@ -22,8 +23,26 @@ export async function getStore(id: string) {
         userId: session.user.id,
         isArchived: false
       },
-      include: {
-        products: true
+      select: {
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: { products: true, orders: true }
+        },
+        products: {
+          where: { isArchived: false },
+          orderBy: { createdAt: "desc" },
+          select: {
+              id: true,
+              name: true,
+              price: true,
+              description: true,
+              images: true,
+              category: true,
+              stock: true
+          }
+        }
       }
     })
 

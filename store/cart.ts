@@ -8,6 +8,7 @@ interface ProductWithStore {
   images: string[]
   category: string
   description: string
+  stock: number
   store: {
     name: string
   }
@@ -25,6 +26,8 @@ interface CartStore {
   addItem: (product: ProductWithStore, selectedAttributes?: SelectedAttributes) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
+  updateItemStock: (productId: string, stock: number) => void;
+  enforceStockLimits: () => void;
 }
 
 export const useCart = create<CartStore>()(
@@ -34,30 +37,40 @@ export const useCart = create<CartStore>()(
 
       addItem: (product, selectedAttributes) =>
         set((state) => {
-          const isItemExists = state.items.find((p) => p.id === product.id);
-          let nextCart: CartItem[];
-          if (isItemExists) {
-            nextCart = state.items.map((item) =>
+          if (product.stock <= 0) {
+            return state;
+          }
+
+          const existingItem = state.items.find((p) => p.id === product.id);
+          if (existingItem) {
+            if (existingItem.quantity >= product.stock) {
+              return state;
+            }
+
+            const nextCart = state.items.map((item) =>
               item.id === product.id
                 ? {
                     ...item,
-                    quantity: item.quantity + 1,
+                    quantity: Math.min(item.quantity + 1, product.stock),
+                    stock: product.stock,
                     selectedAttributes: selectedAttributes ?? item.selectedAttributes,
                   }
                 : item,
             );
-          } else {
-            nextCart = [
+            return { items: nextCart };
+          }
+
+          return {
+            items: [
               ...state.items,
               {
                 ...product,
                 quantity: 1,
+                stock: product.stock,
                 selectedAttributes,
               },
-            ];
-          }
-
-          return { items: nextCart };
+            ],
+          };
         }),
 
       removeItem: (productId) =>
@@ -73,6 +86,42 @@ export const useCart = create<CartStore>()(
         }),
 
       clearCart: () => set({ items: [] }),
+
+      updateItemStock: (productId, stock) =>
+        set((state) => {
+          const nextCart = state.items
+            .map((item) => {
+              if (item.id !== productId) return item;
+
+              if (stock <= 0) {
+                return null;
+              }
+
+              return {
+                ...item,
+                stock,
+                quantity: Math.min(item.quantity, stock),
+              };
+            })
+            .filter((item): item is CartItem => item !== null);
+
+          return { items: nextCart };
+        }),
+
+      enforceStockLimits: () =>
+        set((state) => {
+          const nextCart = state.items
+            .map((item) => {
+              if (item.stock <= 0) return null;
+              if (item.quantity > item.stock) {
+                return { ...item, quantity: item.stock };
+              }
+              return item;
+            })
+            .filter((item): item is CartItem => item !== null);
+
+          return { items: nextCart };
+        }),
     }),
     {
       name: "shopping-cart",

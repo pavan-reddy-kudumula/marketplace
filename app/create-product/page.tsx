@@ -1,9 +1,16 @@
 "use client";
 
 import { createProduct } from "@/actions/product";
+import { auth } from "@/auth";
 import ProductForm, { ProductFormValues } from "@/components/ProductForm";
+import { UserRole } from "@prisma/client";
+import { notFound } from "next/navigation";
 
-export default function CreateProductPage() {
+export default async function CreateProductPage() {
+  const session = await auth();
+  if(session?.user?.role === UserRole.USER) {
+    return notFound();
+  }
   async function handleCreate(values: ProductFormValues) {
     const result = await createProduct(values);
     return result.error ?? null;

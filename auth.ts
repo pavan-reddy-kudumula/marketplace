@@ -1,7 +1,8 @@
 import NextAuth from "next-auth"
 import GitHub from "next-auth/providers/github"
 import { prisma } from "@/lib/prisma"
- 
+import { UserRole } from "@prisma/client"
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [GitHub],
   callbacks: {
@@ -38,11 +39,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user?.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: user.email },
-          select: { id: true },
+          select: { id: true, role: true },
         });
 
         if (dbUser) {
           token.userId = dbUser.id;
+          token.role = dbUser.role;
         }
       }
 
@@ -51,6 +53,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.userId) {
         session.user.id = token.userId as string;
+        session.user.role = (token.role as UserRole) ?? UserRole.USER;
       }
 
       return session;

@@ -1,7 +1,6 @@
 import { getUser } from '@/actions/user';
 import Image from 'next/image';
-import Link from 'next/link';
-import { User } from '@prisma/client';
+import { User, UserRole } from '@prisma/client';
 import StoreManager from '@/components/StoreManager';
 import UserManager from '@/components/UserManager';
 
@@ -10,9 +9,6 @@ interface UserProfile extends User {
     id: string;
     name: string;
   }[];
-  _count?: {
-    orders: number;
-  };
 }
 
 export default async function ProfilePage() {
@@ -77,26 +73,7 @@ export default async function ProfilePage() {
 
         <UserManager user={user} />
 
-        <StoreManager primaryStore={primaryStore} />
-
-        {/* Orders Summary */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Order Activity</h2>
-
-          <div className="text-center py-8">
-            <p className="text-4xl font-bold text-blue-600 mb-2">
-              {user._count?.orders || 0}
-            </p>
-            <p className="text-gray-600">Total Orders</p>
-          </div>
-
-          <Link
-            href="/orders"
-            className="block text-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-3 rounded-lg transition"
-          >
-            View All Orders
-          </Link>
-        </div>
+        { user.role === UserRole.ADMIN && <StoreManager primaryStore={primaryStore} /> }
       </div>
     </div>
   );

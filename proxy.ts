@@ -8,5 +8,5 @@ export const proxy = auth((req) => {
 })
  
 export const config = {
-  matcher: ["/create-product", "/profile", "/orders/:id*"],
+  matcher: ["/create-product", "/store", "/profile", "/orders/:id*"],
 }

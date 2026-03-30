@@ -172,7 +172,7 @@ export default function StoreManager({ primaryStore }: StoreManagerProps) {
 
           <div className="mt-4 flex gap-4 items-center">
             <Link
-              href="/products"
+              href="/store"
               className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
             >
               Manage Store
