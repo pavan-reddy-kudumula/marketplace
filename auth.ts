@@ -1,57 +1,39 @@
 import NextAuth from "next-auth"
 import GitHub from "next-auth/providers/github"
+import Resend from "next-auth/providers/resend"
+import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import { UserRole } from "@prisma/client"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [GitHub],
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    GitHub({
+      allowDangerousEmailAccountLinking: true,
+    }),
+    Resend({
+      from: "Online Marketplace <noreply@mail.onlinemarketplace.app>",
+      apiKey: process.env.AUTH_RESEND_KEY,
+    })
+  ],
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/signin", // so we can show the error message on UI
+  },
+  session: {
+    strategy: "jwt"
+  },
   callbacks: {
-    async signIn({ user }) {      
-      if (!user.email) {
-        console.error('No email provided by OAuth provider');
-        return false;
-      }
-
-      try {
-        // Check if user exists
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email }
-        });
-
-        if (!existingUser) {
-          // Create new user
-          await prisma.user.create({
-            data: {
-              name: user.name,
-              email: user.email,
-              image: user.image,
-            }
-          });
-        }
-
-        return true;
-      } catch (error) {
-        console.error('Error in signIn callback:', error);
-        return false;
-      }
-    },
     async jwt({ token, user }) {
-      if (user?.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: user.email },
-          select: { id: true, role: true },
-        });
-
-        if (dbUser) {
-          token.userId = dbUser.id;
-          token.role = dbUser.role;
-        }
+      if (user) {
+        token.userId = user.id;
+        token.role = (user as any).role ?? UserRole.USER;
       }
 
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.userId) {
+      if (session.user) {
         session.user.id = token.userId as string;
         session.user.role = (token.role as UserRole) ?? UserRole.USER;
       }
