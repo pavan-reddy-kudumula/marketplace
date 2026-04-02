@@ -4,6 +4,7 @@ import { useState, SubmitEvent } from "react";
 import { UserRole } from "@prisma/client";
 import { ShieldCheck } from "lucide-react";
 import { updateUserRole } from "@/actions/user";
+import { useRouter } from "next/navigation";
 
 interface SettingsClientProps {
   user: {
@@ -16,6 +17,7 @@ interface SettingsClientProps {
 }
 
 export default function SettingsClient({ user }: SettingsClientProps) {
+  const router = useRouter();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,7 +31,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
 
     setError("");
     setIsLoading(true);
-
+    
     const response = await updateUserRole();
 
     setIsLoading(false);
@@ -38,6 +40,8 @@ export default function SettingsClient({ user }: SettingsClientProps) {
       setError(response.error || "Unable to update role");
       return;
     }
+
+    router.refresh();
   }
 
   return (

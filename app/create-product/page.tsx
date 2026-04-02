@@ -1,5 +1,3 @@
-"use client";
-
 import { createProduct } from "@/actions/product";
 import { auth } from "@/auth";
 import ProductForm, { ProductFormValues } from "@/components/ProductForm";
@@ -8,10 +6,12 @@ import { notFound } from "next/navigation";
 
 export default async function CreateProductPage() {
   const session = await auth();
-  if(session?.user?.role === UserRole.USER) {
+  if (session?.user?.role === UserRole.USER) {
     return notFound();
   }
+
   async function handleCreate(values: ProductFormValues) {
+    "use server";
     const result = await createProduct(values);
     return result.error ?? null;
   }

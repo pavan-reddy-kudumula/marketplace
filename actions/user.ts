@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { auth, update } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { UserRole } from "@prisma/client";
 
@@ -114,9 +114,9 @@ export async function updateUserRole() {
       data: { role: UserRole.ADMIN },
     });
 
-    revalidatePath("/settings");
-    revalidatePath("/profile");
+    await update({ user: { role: UserRole.ADMIN } });
 
+    revalidatePath('/', 'layout');
     return { success: true, error: null };
   } catch (error) {
     console.error("updateUserRole error:", error);
