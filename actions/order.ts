@@ -266,10 +266,6 @@ export async function cancelOrder(id: string) {
       return { success: false, error: "Not Authorized"}
     }
 
-    if(order.isPaid) {
-      return { success: false, error: "Paid order cannot be cancelled"}
-    }
-
     if(order.status !== OrderStatus.PENDING) {
       return { success: false, error: `Order is ${order.status} and cannot cancel now.`}
     }

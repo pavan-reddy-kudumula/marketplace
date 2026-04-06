@@ -139,10 +139,14 @@ export async function createProduct(product: ProductType) {
     if (!user) {
       return { data: null, error: "User does not exist" };
     }
-
-    if (user.stores.length === 0 || user.role !== UserRole.ADMIN) {
+    
+    if (user.role !== UserRole.ADMIN) {
       return { data: null, error: "Not Authorized" };
     }
+
+    if (user.stores.length === 0) {
+       return { data: null, error: "You do not have a store" };
+    } 
 
     const newProduct = await prisma.product.create({
       data: {

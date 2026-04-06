@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { UserRole } from "@prisma/client";
 
 interface CheckOutProps {
   id: string;
@@ -39,11 +40,15 @@ export default async function CheckOut(
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true },
+      select: { id: true, role: true },
     });
 
     if (!user) {
       return { data: null, error: "user does not exist" };
+    }
+
+    if(user.role === UserRole.ADMIN) {
+      return { data: null, error: "Admin is not allowed to order products" };
     }
 
     const products = await prisma.product.findMany({

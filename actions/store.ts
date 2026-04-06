@@ -81,24 +81,23 @@ export async function createStore(name: string) {
       return { success: false, error: "User does not exist" };
     }
 
+    if(user.role !== UserRole.ADMIN) {
+      return { success: false, error: "You are not authorized" };
+    }
+
     if (user.stores.length > 0) {
       return { success: false, error: "You already have a store" };
     }
 
-    await prisma.$transaction([
-      prisma.store.create({
+    await prisma.store.create({
         data: {
           name: name.trim(),
           userId: user.id,
         },
-      }),
-      prisma.user.update({
-        where: { id: user.id },
-        data: { role: UserRole.ADMIN },
-      }),
-    ]);
+    })
 
     revalidatePath("/profile")
+    revalidatePath("/store")
     return { success: true, error: null };
   } catch (error: any) {
     if (error?.code === 11000) {
@@ -133,13 +132,14 @@ export async function updateStore(name: string) {
       return { success: false, error: "User does not exist" };
     }
 
+    if (user.role !== UserRole.ADMIN) {
+      return { success: false, error: "You are not authorized" };
+    }
+
     if (user.stores.length === 0) {
       return { success: false, error: "You do not have a store" };
     }
 
-    if (user.role !== UserRole.ADMIN) {
-      return { success: false, error: "You are not authorized" };
-    }
 
     await prisma.store.update({
       where: { id: user.stores[0].id },
@@ -149,6 +149,7 @@ export async function updateStore(name: string) {
     });
 
     revalidatePath("/profile")
+    revalidatePath("/store")
     return { success: true, error: null };
   } catch (error) {
     console.error("error in updateStore", error instanceof Error ? error.message : String(error));
@@ -176,13 +177,14 @@ export async function deleteStore() {
       return { success: false, error: "User does not exist" };
     }
 
+    if (user.role !== UserRole.ADMIN) {
+      return { success: false, error: "You are not authorized" };
+    }
+    
     if (user.stores.length === 0) {
       return { success: false, error: "You do not have a store" };
     }
 
-    if (user.role !== UserRole.ADMIN) {
-      return { success: false, error: "You are not authorized" };
-    }
 
     await prisma.$transaction([
       prisma.product.updateMany({
@@ -192,14 +194,11 @@ export async function deleteStore() {
       prisma.store.update({
         where: { id: user.stores[0].id },
         data: { isArchived: true },
-      }),
-      prisma.user.update({
-        where: { id: user.id },
-        data: { role: UserRole.USER },
-      }),
+      })
     ]);
 
     revalidatePath("/profile")
+    revalidatePath("/store")
     return { success: true, error: null };
   } catch (error) {
     console.error("error in deleteStore", error);
