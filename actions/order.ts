@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { OrderStatus, UserRole } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 export async function getOrderById(id: string) {
   try {
@@ -48,10 +49,7 @@ export async function getOrderById(id: string) {
     }
 
     // Ensure the order belongs to the requesting user
-    if (
-      order.user.id !== currentUser.id &&
-      order.store.userId !== currentUser.id
-    ) {
+    if (order.user.id !== currentUser.id && order.store.userId !== currentUser.id) {
       return { data: null, error: "Not Authorized" };
     }
 
@@ -143,9 +141,7 @@ export async function getPaginatedStoreOrders(page: number = 1, pageSize: number
 
     const [orders, totalCount] = await Promise.all([
       prisma.order.findMany({
-        where: {
-          store: { userId: currentUser.id, isArchived: false },
-        },
+        where: { store: { userId: currentUser.id} },
         select: {
           id: true,
           status: true,
@@ -160,9 +156,7 @@ export async function getPaginatedStoreOrders(page: number = 1, pageSize: number
         take: pageSize,
       }),
       prisma.order.count({
-        where: {
-          store: { userId: currentUser.id, isArchived: false },
-        },
+        where: { store: { userId: currentUser.id} },
       }),
     ]);
 
@@ -231,6 +225,9 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
       data: { status },
     });
 
+    revalidatePath(`/orders/${id}`);
+    revalidatePath("/orders");
+
     return { data: updated, error: null };
   } catch (error) {
     console.error("error in updateOrderStatus:", error);
@@ -276,6 +273,9 @@ export async function cancelOrder(id: string) {
         status: OrderStatus.CANCELLED
       }
     })
+
+    revalidatePath(`/orders/${id}`);
+    revalidatePath("/orders");
 
     return { success: true, error: null}
   } catch (error) {

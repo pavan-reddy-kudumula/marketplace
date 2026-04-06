@@ -16,7 +16,7 @@ export async function getUser() {
     if (!session?.user?.id) {
       return { data: null, error: "Not Authenticated" };
     }
-
+    
     const isAdmin = session?.user?.role === UserRole.ADMIN;
 
     const user = await prisma.user.findUnique({

@@ -91,7 +91,7 @@ export default async function StorePage() {
         {products.length === 0 ? (
           <div className="bg-white rounded-xl shadow p-8 text-center">
             <h2 className="text-xl font-semibold">No products yet</h2>
-            <p className="text-gray-600 mt-2">Add items using “Add Product”.</p>
+            <p className="text-gray-600 mt-2">Add items using "Create Product”.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

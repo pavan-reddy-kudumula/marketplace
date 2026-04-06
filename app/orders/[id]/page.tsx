@@ -1,4 +1,6 @@
-import { getOrderById } from "@/actions/order"
+import { getOrderById, updateOrderStatus, cancelOrder } from "@/actions/order"
+import { auth } from "@/auth"
+import { OrderStatus, UserRole } from "@prisma/client"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -21,7 +23,8 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
 
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
     const { id } = await params
-    const orderDetails = await getOrderById(id)
+    const orderDetails = await getOrderById(id);
+    const session = await auth()
     
     if (!orderDetails.data || orderDetails.error) {
         notFound()
@@ -29,6 +32,12 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     
     const order = orderDetails.data
     const subtotal = order.orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const isOrderOwner = session?.user?.id === order.user.id
+    const isAdmin = session?.user?.role === UserRole.ADMIN
+    const isStoreOwner = session?.user?.id === order.store.userId
+    const canCancel = isOrderOwner && order.status === OrderStatus.PENDING
+    const canUpdateStatus = isAdmin && isStoreOwner && order.status !== OrderStatus.DELIVERED && order.status !== OrderStatus.CANCELLED
+    const nextStatuses: OrderStatus[] = [OrderStatus.PENDING, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.CANCELLED]
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-10">
@@ -54,6 +63,62 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                     </span>
                 </div>
             </div>
+
+            {(canCancel || canUpdateStatus) && (
+                <section className="mb-8">
+                    <h2 className="text-base font-semibold mb-3">Order Actions</h2>
+                    <div className="border rounded-lg px-4 py-4 space-y-4">
+                        {canCancel && (
+                            <form
+                                action={async () => {
+                                    "use server"
+                                    await cancelOrder(order.id)
+                                }}
+                            >
+                                <button
+                                    type="submit"
+                                    className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                                >
+                                    Cancel Order
+                                </button>
+                                <p className="mt-2 text-xs text-gray-500">You can cancel this order only while it is pending.</p>
+                            </form>
+                        )}
+
+                        {canUpdateStatus && (
+                            <form
+                                action={async (formData) => {
+                                    "use server"
+                                    const selectedStatus = formData.get("status") as OrderStatus
+                                    await updateOrderStatus(order.id, selectedStatus)
+                                }}
+                                className="flex flex-wrap items-end gap-3"
+                            >
+                                <label className="text-sm text-gray-700">
+                                    Update Status
+                                    <select
+                                        name="status"
+                                        defaultValue={order.status}
+                                        className="mt-1 block rounded-md border border-gray-300 px-3 py-2 text-sm"
+                                    >
+                                        {nextStatuses.map((status) => (
+                                            <option key={status} value={status}>
+                                                {status}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <button
+                                    type="submit"
+                                    className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                                >
+                                    Save Status
+                                </button>
+                            </form>
+                        )}
+                    </div>
+                </section>
+            )}
 
             {/* Status message */}
             <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-gray-600 mb-6">
@@ -158,6 +223,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                     </div>
                 </div>
             </section>
+
         </div>
     )
 }
