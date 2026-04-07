@@ -12,6 +12,8 @@ interface CheckOutProps {
 
 interface CheckOutOptions {
   paymentId?: string;
+  phone?: string;
+  address?: string;
 }
 
 export default async function CheckOut(
@@ -32,6 +34,12 @@ export default async function CheckOut(
         }
 
     const paymentId = options?.paymentId?.trim() || null;
+    const phone = options?.phone?.trim() || "";
+    const address = options?.address?.trim() || "";
+
+    if (!address) {
+      return { data: null, error: "Address is required for checkout" };
+    }
 
     const session = await auth();
     if (!session?.user?.id) {
@@ -116,6 +124,8 @@ export default async function CheckOut(
             userId: user.id,
             storeId,
             storeName: productMap[storeItems[0].id].store.name,
+            phone,
+            address,
             orderItems: {
               create: storeItems.map((item) => ({
                 productId: item.id,

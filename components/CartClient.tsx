@@ -2,6 +2,7 @@
 
 import { useCart } from "@/store/cart";
 import CheckOut from "@/actions/checkout";
+import { getUser } from "@/actions/user";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,9 @@ export default function CartClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [phone, setPhone] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [userLoading, setUserLoading] = useState(true);
 
   const enforceStockLimits = useCart((state) => state.enforceStockLimits);
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -22,9 +26,32 @@ export default function CartClient() {
     enforceStockLimits();
   }, [items.length, enforceStockLimits]);
 
+  useEffect(() => {
+    async function fetchUserData() {
+      try {
+        const result = await getUser();
+        if (result.data) {
+          setPhone(result.data.phone || "");
+          setAddress(result.data.address || "");
+        }
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+      } finally {
+        setUserLoading(false);
+      }
+    }
+    fetchUserData();
+  }, []);
+
   async function handleCheckout() {
     setLoading(true);
     setError(null);
+
+    if (!address || address.trim() === "") {
+      setError("Address is required for checkout");
+      setLoading(false);
+      return;
+    }
 
     try {
       const result = await CheckOut(
@@ -32,7 +59,8 @@ export default function CartClient() {
           id: item.id,
           quantity: item.quantity,
           selectedAttributes: item.selectedAttributes,
-        }))
+        })),
+        { phone: phone.trim(), address: address.trim() }
       );
 
       if (result.error || !result.data) {
@@ -77,46 +105,48 @@ export default function CartClient() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl shadow-sm p-4 flex gap-4 items-center"
+                className="bg-white rounded-2xl shadow-sm p-4 flex flex-col gap-4"
               >
-                <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                  {item.images?.[0] ? (
-                    <Image
-                      src={item.images[0]}
-                      alt={item.name}
-                      width={80}
-                      height={80}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">
-                      📦
-                    </div>
-                  )}
-                </div>
+                <div className="flex gap-4 items-center">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                    {item.images?.[0] ? (
+                      <Image
+                        src={item.images[0]}
+                        alt={item.name}
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">
+                        📦
+                      </div>
+                    )}
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 truncate">{item.name}</p>
-                  <p className="text-sm text-gray-400">{item.store.name}</p>
-                  {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {Object.entries(item.selectedAttributes)
-                        .map(([key, value]) => `${key.replace(/_/g, " ")}: ${value}`)
-                        .join(", ")}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 line-clamp-1">{item.name}</p>
+                    <p className="text-sm text-gray-400">{item.store.name}</p>
+                    {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {Object.entries(item.selectedAttributes)
+                          .map(([key, value]) => `${key.replace(/_/g, " ")}: ${value}`)
+                          .join(", ")}
+                      </p>
+                    )}
+                    <p className="text-sm text-indigo-600 font-medium mt-1">
+                      ${(item.price / 100).toFixed(2)} each
                     </p>
-                  )}
-                  <p className="text-sm text-indigo-600 font-medium mt-1">
-                    ${(item.price / 100).toFixed(2)} each
-                  </p>
+                  </div>
+
+                  <div className="text-right shrink-0 w-20">
+                    <p className="font-semibold text-gray-800">
+                      ${((item.price * item.quantity) / 100).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
 
                 <CartItemControls product={item}/>
-
-                <div className="text-right shrink-0 w-20">
-                  <p className="font-semibold text-gray-800">
-                    ${((item.price * item.quantity) / 100).toFixed(2)}
-                  </p>
-                </div>
               </div>
             ))}
           </div>
@@ -140,6 +170,36 @@ export default function CartClient() {
                   <span>${(total / 100).toFixed(2)}</span>
                 </div>
               </div>
+
+              {!userLoading && (
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Enter your phone number"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Enter your delivery address"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              )}
 
               {error && (
                 <p className="text-red-500 text-sm mb-4 text-center">{error}</p>

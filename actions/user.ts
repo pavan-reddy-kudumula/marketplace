@@ -8,6 +8,8 @@ import { UserRole } from "@prisma/client";
 interface UpdateUserProps {
   name?: string;
   image?: string;
+  phone?: string;
+  address?: string;
 }
 
 export async function getUser() {
@@ -50,9 +52,9 @@ export async function getUser() {
   }
 }
 
-export async function updateUser({ name, image }: UpdateUserProps) {
+export async function updateUser({ name, image, phone, address }: UpdateUserProps) {
   try {
-    if (!name && !image) {
+    if (!name && !image && !phone && !address) {
       return { success: false, error: "No fields to update" };
     }
 
@@ -68,6 +70,8 @@ export async function updateUser({ name, image }: UpdateUserProps) {
       data: {
         name,
         image,
+        phone,
+        address
       },
     });
 

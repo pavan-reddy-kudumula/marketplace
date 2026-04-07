@@ -84,7 +84,7 @@ export default function Navbar({ session }: { session: Session | null }) {
 
                 {/* Dropdown Card */}
                 {/* 'pt-2' creates a gap, 'invisible bridge' ensures mouse doesn't lose focus */}
-                <div className="absolute right-0 top-full w-60 pt-2 opacity-0 invisible translate-y-2 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0">
+                <div className="absolute right-0 top-full w-60 pt-2 z-50 opacity-0 invisible translate-y-2 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0">
                   <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
                     {/* User Header */}
                     <div className="border-b border-white/5 bg-white/5 px-4 py-3">

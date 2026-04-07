@@ -14,6 +14,8 @@ export default function UserManager({ user }: UserManagerProps) {
   const [isUpdateUser, setIsUpdateUser] = useState(false);
   const [updateName, setUpdateName] = useState('');
   const [updateImage, setUpdateImage] = useState<string>('');
+  const [updatePhone, setUpdatePhone] = useState('');
+  const [updateAddress, setUpdateAddress] = useState('');
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [updateUserError, setUpdateUserError] = useState('');
 
@@ -26,6 +28,8 @@ export default function UserManager({ user }: UserManagerProps) {
       const response = await updateUser({
         name: updateName || undefined,
         image: updateImage || undefined,
+        phone: updatePhone || undefined,
+        address: updateAddress || undefined,
       });
 
       if (!response.success) {
@@ -58,6 +62,8 @@ export default function UserManager({ user }: UserManagerProps) {
             onClick={() => {
               setUpdateName(user?.name || '');
               setUpdateImage(user?.image || '');
+              setUpdatePhone(user?.phone || '');
+              setUpdateAddress(user?.address || '');
               setUpdateUserError('');
               setIsUpdateUser(true);
             }}
@@ -77,6 +83,20 @@ export default function UserManager({ user }: UserManagerProps) {
             <p className="text-sm text-gray-600 mb-1">Full Name</p>
             <p className="text-lg font-medium text-gray-900">
               {user.name || 'Not provided'}
+            </p>
+          </div>
+
+          <div className="border-b pb-4">
+            <p className="text-sm text-gray-600 mb-1">Phone Number</p>
+            <p className="text-lg font-medium text-gray-900">
+              {user.phone || 'Not provided'}
+            </p>
+          </div>
+          
+          <div className="border-b pb-4">
+            <p className="text-sm text-gray-600 mb-1">Address</p>
+            <p className="text-lg font-medium text-gray-900">
+              {user.address || 'Not provided'}
             </p>
           </div>
 
@@ -123,6 +143,44 @@ export default function UserManager({ user }: UserManagerProps) {
                     setUpdateUserError('');
                   }}
                   placeholder="Enter full name"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900"
+                  disabled={isUpdatingUser}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="updatePhone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  id="updatePhone"
+                  value={updatePhone}
+                  onChange={(e) => {
+                    setUpdatePhone(e.target.value);
+                    setUpdateUserError('');
+                  }}
+                  placeholder="Enter phone number"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900"
+                  disabled={isUpdatingUser}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="updateAddress" className="block text-sm font-medium text-gray-700 mb-2">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  id="updateAddress"
+                  value={updateAddress}
+                  onChange={(e) => {
+                    setUpdateAddress(e.target.value);
+                    setUpdateUserError('');
+                  }}
+                  placeholder="Enter address"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900"
                   disabled={isUpdatingUser}
                   required
