@@ -1,10 +1,12 @@
 "use client";
 
 import { useCart } from "@/store/cart";
+import { createRazorpayOrder } from "@/actions/razorpay";
 import CheckOut from "@/actions/checkout";
 import { getUser } from "@/actions/user";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CartItemControls from "./CartItemControls";
@@ -54,27 +56,81 @@ export default function CartClient() {
     }
 
     try {
-      const result = await CheckOut(
-        items.map((item) => ({
-          id: item.id,
-          quantity: item.quantity,
-          selectedAttributes: item.selectedAttributes,
-        })),
-        { phone: phone.trim(), address: address.trim() }
-      );
-
-      if (result.error || !result.data) {
-        setError(result.error ?? "Checkout failed. Please try again.");
+      if (typeof window === "undefined" || !(window as any).Razorpay) {
+        setError("Razorpay SDK not loaded. Please try again.");
         return;
       }
 
-      clearCart();
-      router.push(result.data.length === 1 ? `/orders/${result.data[0]}` : "/orders");
+      const orderResult = await createRazorpayOrder(total);
+
+      if (orderResult.error || !orderResult.data) {
+        setError(orderResult.error || "Failed to create payment order");
+        setLoading(false);
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderResult.data.amount,
+        currency: orderResult.data.currency,
+        name: "Marketplace App",
+        description: "Test Transaction",
+        order_id: orderResult.data.id,
+        prefill: {
+          contact: phone,
+        },
+        theme: {
+          color: "#4f46e5",
+        },
+        modal: {
+          ondismiss: function () {
+            setLoading(false);
+          },
+        },
+        handler: async function (response: any) {
+          try {
+            setLoading(true);
+            const result = await CheckOut(
+              items.map((item) => ({
+                id: item.id,
+                quantity: item.quantity,
+                selectedAttributes: item.selectedAttributes,
+              })),
+              { 
+                phone: phone.trim(), 
+                address: address.trim(),
+                paymentId: response.razorpay_payment_id 
+              }
+            );
+
+            if (result.error || !result.data) {
+              setError(result.error ?? "Checkout failed. Please try again.");
+              return;
+            }
+
+            clearCart();
+            router.push(result.data.length === 1 ? `/orders/${result.data[0]}` : "/orders");
+          } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Checkout failed. Please try again.");
+          } finally {
+            setLoading(false);
+          }
+        },
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.on("payment.failed", function (response: any) {
+        setError(response.error.description || "Payment failed");
+        setLoading(false);
+      });
+
+      paymentObject.open();
+
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Checkout failed. Please try again.");
-    } finally {
+      setError(err instanceof Error ? err.message : "Initialization failed. Please try again.");
       setLoading(false);
     }
+    // We don't set loading to false in finally here because it needs to stay true while the handler runs or modal is open
   }
 
   if (items.length === 0) {
@@ -96,9 +152,12 @@ export default function CartClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Shopping Cart</h1>
+    <>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-100 py-8 px-4">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="text-2xl font-bold text-gray-800 mb-6">Shopping Cart</h1>
+
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 space-y-4">
@@ -135,13 +194,13 @@ export default function CartClient() {
                       </p>
                     )}
                     <p className="text-sm text-indigo-600 font-medium mt-1">
-                      ${(item.price / 100).toFixed(2)} each
+                      ₹{(item.price / 100).toFixed(2)} each
                     </p>
                   </div>
 
                   <div className="text-right shrink-0 w-20">
                     <p className="font-semibold text-gray-800">
-                      ${((item.price * item.quantity) / 100).toFixed(2)}
+                      ₹{((item.price * item.quantity) / 100).toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -159,7 +218,7 @@ export default function CartClient() {
                 {items.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm text-gray-600">
                     <span className="truncate mr-2">{item.name} x {item.quantity}</span>
-                    <span className="shrink-0">${((item.price * item.quantity) / 100).toFixed(2)}</span>
+                    <span className="shrink-0">₹{((item.price * item.quantity) / 100).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -167,7 +226,7 @@ export default function CartClient() {
               <div className="border-t border-gray-100 pt-4 mb-6">
                 <div className="flex justify-between font-bold text-gray-800 text-base">
                   <span>Total</span>
-                  <span>${(total / 100).toFixed(2)}</span>
+                  <span>₹{(total / 100).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -226,5 +285,6 @@ export default function CartClient() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -1,9 +1,12 @@
-import { getOrderById, updateOrderStatus, cancelOrder } from "@/actions/order"
+import { getOrderById } from "@/actions/order"
 import { auth } from "@/auth"
 import { OrderStatus, UserRole } from "@prisma/client"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import RatingForm from "@/components/RatingForm"
+import OrderActionsClient from "@/components/OrderActionsClient"
+
 
 const STATUS_STYLES: Record<string, string> = {
     PENDING:    "bg-yellow-100 text-yellow-800",
@@ -65,59 +68,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             </div>
 
             {(canCancel || canUpdateStatus) && (
-                <section className="mb-8">
-                    <h2 className="text-base font-semibold mb-3">Order Actions</h2>
-                    <div className="border rounded-lg px-4 py-4 space-y-4">
-                        {canCancel && (
-                            <form
-                                action={async () => {
-                                    "use server"
-                                    await cancelOrder(order.id)
-                                }}
-                            >
-                                <button
-                                    type="submit"
-                                    className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-                                >
-                                    Cancel Order
-                                </button>
-                                <p className="mt-2 text-xs text-gray-500">You can cancel this order only while it is pending.</p>
-                            </form>
-                        )}
-
-                        {canUpdateStatus && (
-                            <form
-                                action={async (formData) => {
-                                    "use server"
-                                    const selectedStatus = formData.get("status") as OrderStatus
-                                    await updateOrderStatus(order.id, selectedStatus)
-                                }}
-                                className="flex flex-wrap items-end gap-3"
-                            >
-                                <label className="text-sm text-gray-700">
-                                    Update Status
-                                    <select
-                                        name="status"
-                                        defaultValue={order.status}
-                                        className="mt-1 block rounded-md border border-gray-300 px-3 py-2 text-sm"
-                                    >
-                                        {nextStatuses.map((status) => (
-                                            <option key={status} value={status}>
-                                                {status}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <button
-                                    type="submit"
-                                    className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                                >
-                                    Save Status
-                                </button>
-                            </form>
-                        )}
-                    </div>
-                </section>
+                <OrderActionsClient
+                    orderId={order.id}
+                    currentStatus={order.status}
+                    canCancel={canCancel}
+                    canUpdateStatus={canUpdateStatus}
+                    nextStatuses={nextStatuses}
+                />
             )}
 
             {/* Status message */}
@@ -156,29 +113,38 @@ export default async function OrderDetailPage({ params }: { params: { id: string
                 <h2 className="text-base font-semibold mb-3">Items ({order.orderItems.length})</h2>
                 <div className="border rounded-lg divide-y overflow-hidden">
                     {order.orderItems.map((item) => (
-                        <div key={item.id} className="flex items-center gap-4 px-4 py-4">
-                            {item.product.images[0] ? (
-                                <div className="relative h-20 w-20 flex-shrink-0 rounded overflow-hidden bg-gray-100">
-                                    <Image
-                                        src={item.product.images[0]}
-                                        alt={item.product.name}
-                                        fill
-                                        className="object-cover"
-                                    />
+                        <div key={item.id} className="flex flex-col px-4 py-4">
+                            <div className="flex items-center gap-4">
+                                {item.product.images[0] ? (
+                                    <div className="relative h-20 w-20 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                                        <Image
+                                            src={item.product.images[0]}
+                                            alt={item.product.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="h-20 w-20 flex-shrink-0 rounded bg-gray-100" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium">{item.productName}</p>
+                                    <p className="text-sm text-gray-500 mt-0.5">{order.storeName}</p>
+                                    <p className="text-sm text-gray-500">{item.product.category}</p>
+                                    <p className="text-sm text-gray-500 mt-1">Qty: {item.quantity}</p>
                                 </div>
-                            ) : (
-                                <div className="h-20 w-20 flex-shrink-0 rounded bg-gray-100" />
+                                <div className="text-right">
+                                    <p className="font-semibold">${((item.price * item.quantity) / 100).toFixed(2)}</p>
+                                    <p className="text-xs text-gray-400">${(item.price / 100).toFixed(2)} each</p>
+                                </div>
+                            </div>
+                            {order.status === OrderStatus.DELIVERED && isOrderOwner && (
+                                <RatingForm
+                                    productId={item.product.id}
+                                    productName={item.productName}
+                                    canReview={order.status === OrderStatus.DELIVERED}
+                                />
                             )}
-                            <div className="flex-1 min-w-0">
-                                <p className="font-medium">{item.productName}</p>
-                                <p className="text-sm text-gray-500 mt-0.5">{order.storeName}</p>
-                                <p className="text-sm text-gray-500">{item.product.category}</p>
-                                <p className="text-sm text-gray-500 mt-1">Qty: {item.quantity}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="font-semibold">${((item.price * item.quantity) / 100).toFixed(2)}</p>
-                                <p className="text-xs text-gray-400">${(item.price / 100).toFixed(2)} each</p>
-                            </div>
                         </div>
                     ))}
                 </div>

@@ -66,7 +66,7 @@ export default function ProductCard({ product, storeName }: ProductCardProps) {
         <div className="pt-3 border-t border-gray-100">
           <div className="flex gap-2 items-center justify-between mb-3">
             <span className="text-2xl font-bold text-indigo-600">
-              ${(product.price / 100).toFixed(2)}
+              ₹{(product.price / 100).toFixed(2)}
             </span>
           </div>
         </div>

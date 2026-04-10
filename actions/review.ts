@@ -2,6 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
+import { OrderStatus } from "@prisma/client";
+import Orders from "@/app/orders/page";
 
 interface ReviewProps {
     rating: number;
@@ -14,6 +17,100 @@ interface CreateReviewProps extends ReviewProps {
 
 interface UpdateReviewProps extends ReviewProps {
     reviewId: string;
+}
+
+export async function getProductReviews(productId: string) {
+    try {
+        if(!productId?.trim()) {
+            return { data: null, error: "productId cannot be empty" }
+        }
+
+        const reviews = await prisma.review.findMany({
+            where: {
+                productId
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        image: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: "desc"
+            }
+        })
+
+        return { data: reviews, error: null }
+    } catch (error: any) {
+        console.error("getProductReviews error:", error)
+        return { data: null, error: "An unexpected error occurred" }
+    }
+}
+
+export async function getUserReviewForProduct(productId: string) {
+    try {
+        if(!productId?.trim()) {
+            return { data: null, error: "productId cannot be empty" }
+        }
+
+        const session = await auth()
+
+        if(!session?.user?.id) {
+            return { data: null, error: null }  // Not authenticated, return no review
+        }
+
+        const review = await prisma.review.findUnique({
+            where: {
+                userId_productId: {
+                    userId: session.user.id,
+                    productId
+                }
+            }
+        })
+
+        return { data: review, error: null }
+    } catch (error: any) {
+        console.error("getUserReviewForProduct error:", error)
+        return { data: null, error: "An unexpected error occurred" }
+    }
+}
+
+export async function canReviewProduct(productId: string) {
+    try {
+        if(!productId?.trim()) {
+            return { success: false, error: "productId cannot be empty" }
+        }
+
+        const session = await auth()
+
+        if(!session?.user?.id) {
+            return { success: false, error: null }  // Not authenticated, return no review
+        }
+
+        const orders = await prisma.order.findFirst({
+            where: {
+                userId: session.user.id,
+                status: OrderStatus.DELIVERED,
+                orderItems: {
+                    some: {
+                        productId
+                    }
+                }
+            },
+            select: { id: true }
+        })
+
+        if(!orders) {
+            return { success: false, error: "Cannot review" }
+        }
+        
+        return { success: true, error: null }
+    } catch (error) {
+        return { success: false, error: "An unexpected error occured" }
+    }
 }
 
 export async function createReview({productId, rating, comment}: CreateReviewProps) {
@@ -41,8 +138,8 @@ export async function createReview({productId, rating, comment}: CreateReviewPro
             }
         })
         
+        revalidatePath(`/products/${productId}`)
         return { success: true, error: null }
-
     } catch (error) {
         console.error("createReview error:", error)
         return { success: false, error: "An unexpected error occurred" }
@@ -107,7 +204,6 @@ export async function deleteReview(id: string) {
         })
         
         return { success: true, error: null }
-
     } catch (error: any) {
         console.error("deleteReview error:", error)
         if (error?.code === "P2025") {
