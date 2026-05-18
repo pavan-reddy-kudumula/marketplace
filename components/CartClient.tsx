@@ -94,7 +94,6 @@ export default function CartClient() {
               items.map((item) => ({
                 id: item.id,
                 quantity: item.quantity,
-                selectedAttributes: item.selectedAttributes,
               })),
               { 
                 phone: phone.trim(), 
@@ -186,13 +185,6 @@ export default function CartClient() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 line-clamp-1">{item.name}</p>
                     <p className="text-sm text-gray-400">{item.store.name}</p>
-                    {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {Object.entries(item.selectedAttributes)
-                          .map(([key, value]) => `${key.replace(/_/g, " ")}: ${value}`)
-                          .join(", ")}
-                      </p>
-                    )}
                     <p className="text-sm text-indigo-600 font-medium mt-1">
                       ₹{(item.price / 100).toFixed(2)} each
                     </p>

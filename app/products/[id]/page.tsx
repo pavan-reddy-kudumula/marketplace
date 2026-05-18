@@ -13,65 +13,6 @@ import { UserRole } from "@prisma/client";
 import { canReviewProduct } from "@/actions/review";
 import RatingForm from "@/components/RatingForm";
 
-function formatAttributeValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  if (value === null || value === undefined) return "-";
-  if (Array.isArray(value)) {
-    return value
-      .map((item) =>
-        typeof item === "string" ||
-        typeof item === "number" ||
-        typeof item === "boolean"
-          ? String(item)
-          : JSON.stringify(item),
-      )
-      .join(", ");
-  }
-
-  return JSON.stringify(value);
-}
-
-function normalizeFormAttributes(
-  value: unknown,
-): Record<string, string | string[]> | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return undefined;
-  }
-
-  const normalized: Record<string, string | string[]> = {};
-
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (Array.isArray(raw)) {
-      const values = raw
-        .map((item) =>
-          typeof item === "string" ||
-          typeof item === "number" ||
-          typeof item === "boolean"
-            ? String(item)
-            : "",
-        )
-        .filter(Boolean);
-
-      if (values.length > 0) {
-        normalized[key] = values;
-      }
-      continue;
-    }
-
-    if (
-      typeof raw === "string" ||
-      typeof raw === "number" ||
-      typeof raw === "boolean"
-    ) {
-      normalized[key] = String(raw);
-    }
-  }
-
-  return Object.keys(normalized).length > 0 ? normalized : undefined;
-}
-
 interface ProductDetailPageProps {
   params: {
     id: string;
@@ -115,13 +56,6 @@ export default async function ProductDetailPage({
   }
 
   const product = result.data;
-  const attributes =
-    product.attributes &&
-    typeof product.attributes === "object" &&
-    !Array.isArray(product.attributes)
-      ? Object.entries(product.attributes)
-      : [];
-  const formAttributes = normalizeFormAttributes(product.attributes);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-100 px-4 py-10">
@@ -169,29 +103,6 @@ export default async function ProductDetailPage({
               </p>
             </div>
 
-            {attributes.length > 0 && (
-              <div className="mt-6 border-t border-gray-100 pt-6">
-                <h2 className="text-base font-semibold text-gray-800">
-                  Attributes
-                </h2>
-                <div className="mt-3 space-y-2 text-sm">
-                  {attributes.map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex items-start justify-between gap-4 rounded-md bg-gray-50 px-3 py-2"
-                    >
-                      <span className="font-medium capitalize text-gray-700">
-                        {key.replace(/_/g, " ")}
-                      </span>
-                      <span className="text-right text-gray-600">
-                        {formatAttributeValue(value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="mt-6 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
               <p>
                 <span className="font-semibold text-gray-800">In stock:</span>{" "}
@@ -216,7 +127,6 @@ export default async function ProductDetailPage({
                   images={product.images}
                   category={product.category}
                   stock={product.stock}
-                  attributes={formAttributes}
                 />
                 <ProductDeleteAction
                   id={product.id}

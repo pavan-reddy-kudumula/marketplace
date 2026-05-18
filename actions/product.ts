@@ -3,7 +3,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { UserRole } from "@prisma/client";
-import { JsonValue } from "@prisma/client/runtime/library";
 import { revalidatePath } from "next/cache";
 
 interface ProductType {
@@ -13,7 +12,6 @@ interface ProductType {
   images: string[];
   category: string;
   stock: number;
-  attributes?: JsonValue;
 }
 
 interface SearchParams {
@@ -74,7 +72,18 @@ export async function getProduct(id: string) {
         id,
         isArchived: false,
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        stock: true,
+        images: true,
+        category: true,
+        storeId: true,
+        createdAt: true,
+        updatedAt: true,
+        isArchived: true,
         store: {
           select: {
             name: true,
@@ -157,7 +166,6 @@ export async function createProduct(product: ProductType) {
         category: product.category.trim(),
         storeId: user.stores[0].id,
         stock: product.stock,
-        attributes: product.attributes ?? undefined,
       },
     });
 
@@ -241,7 +249,6 @@ export async function updateProduct(productData: UpdateProductProps) {
         images: fields.images,
         category: fields.category.trim(),
         stock: fields.stock,
-        attributes: fields.attributes ?? undefined,
       },
     });
 

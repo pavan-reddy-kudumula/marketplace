@@ -21,7 +21,6 @@ interface ProductUpdateActionProps {
 	images: string[];
 	category: string;
 	stock: number;
-	attributes?: Record<string, string | string[]>;
 }
 
 export function ProductUpdateAction({
@@ -33,7 +32,6 @@ export function ProductUpdateAction({
 	images,
 	category,
 	stock,
-	attributes,
 }: ProductUpdateActionProps) {
 	const [isEditing, setIsEditing] = useState(false);
 
@@ -90,7 +88,6 @@ export function ProductUpdateAction({
 							images,
 							category,
 							stock,
-							attributes,
 						}}
 					/>
 				</div>

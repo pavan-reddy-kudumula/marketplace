@@ -6,11 +6,6 @@ import CloudinaryUploadButton from "@/components/CloudinaryUploadButton";
 
 const MAX_IMAGES = 5;
 
-interface AttributePair {
-  key: string;
-  value: string;
-}
-
 export interface ProductFormValues {
   name: string;
   description: string;
@@ -18,7 +13,6 @@ export interface ProductFormValues {
   images: string[];
   category: string;
   stock: number;
-  attributes?: Record<string, string | string[]>;
 }
 
 interface ProductFormProps {
@@ -29,43 +23,6 @@ interface ProductFormProps {
   onCancel?: () => void;
 }
 
-function toAttributePairs(
-  attributes: ProductFormValues["attributes"] | Record<string, unknown> | undefined,
-): AttributePair[] {
-  if (!attributes || typeof attributes !== "object" || Array.isArray(attributes)) {
-    return [{ key: "", value: "" }];
-  }
-
-  const pairs = Object.entries(attributes)
-    .map(([key, value]) => {
-      if (Array.isArray(value)) {
-        const serialized = value
-          .map((item) =>
-            typeof item === "string" || typeof item === "number" || typeof item === "boolean"
-              ? String(item)
-              : "",
-          )
-          .filter(Boolean)
-          .join(", ");
-
-        return { key, value: serialized };
-      }
-
-      if (
-        typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean"
-      ) {
-        return { key, value: String(value) };
-      }
-
-      return null;
-    })
-    .filter((pair): pair is AttributePair => pair !== null);
-
-  return pairs.length > 0 ? pairs : [{ key: "", value: "" }];
-}
-
 export default function ProductForm({
   submitLabel,
   submittingLabel,
@@ -74,9 +31,6 @@ export default function ProductForm({
   onCancel,
 }: ProductFormProps) {
   const [images, setImages] = useState<string[]>(initialValues?.images ?? []);
-  const [attributePairs, setAttributePairs] = useState<AttributePair[]>(
-    toAttributePairs(initialValues?.attributes),
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,25 +47,6 @@ export default function ProductForm({
       }
 
       return [...prev, url];
-    });
-  }
-
-  function updateAttributePair(index: number, field: keyof AttributePair, value: string) {
-    setAttributePairs((prev) =>
-      prev.map((pair, currentIndex) =>
-        currentIndex === index ? { ...pair, [field]: value } : pair,
-      ),
-    );
-  }
-
-  function addAttributePair() {
-    setAttributePairs((prev) => [...prev, { key: "", value: "" }]);
-  }
-
-  function removeAttributePair(index: number) {
-    setAttributePairs((prev) => {
-      const next = prev.filter((_, currentIndex) => currentIndex !== index);
-      return next.length === 0 ? [{ key: "", value: "" }] : next;
     });
   }
 
@@ -146,38 +81,6 @@ export default function ProductForm({
       return;
     }
 
-    const attributes: Record<string, string | string[]> = {};
-    for (const pair of attributePairs) {
-      const key = pair.key.trim();
-      const value = pair.value.trim();
-
-      if (!key && !value) {
-        continue;
-      }
-
-      if (!key || !value) {
-        setError("Each attribute must include both key and value.");
-        return;
-      }
-
-      if (Object.prototype.hasOwnProperty.call(attributes, key)) {
-        setError(`Duplicate attribute key: ${key}`);
-        return;
-      }
-
-      const values = value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-
-      if (values.length === 0) {
-        setError(`Attribute value for \"${key}\" is empty.`);
-        return;
-      }
-
-      attributes[key] = values.length === 1 ? values[0] : values;
-    }
-
     try {
       setLoading(true);
       const submitError = await onSubmit({
@@ -187,7 +90,6 @@ export default function ProductForm({
         images,
         category,
         stock: stockRaw,
-        attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
       });
 
       if (submitError) {
@@ -286,45 +188,6 @@ export default function ProductForm({
           }
           className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
         />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-semibold text-gray-700">Attributes (optional)</label>
-          <button
-            type="button"
-            onClick={addAttributePair}
-            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-          >
-            + Add attribute
-          </button>
-        </div>
-
-        {attributePairs.map((pair, index) => (
-          <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1.5fr_auto]">
-            <input
-              type="text"
-              value={pair.key}
-              onChange={(e) => updateAttributePair(index, "key", e.target.value)}
-              placeholder="Key (e.g. shirt color)"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-            />
-            <input
-              type="text"
-              value={pair.value}
-              onChange={(e) => updateAttributePair(index, "value", e.target.value)}
-              placeholder="Value(s), comma separated (e.g. red, green, blue)"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-            />
-            <button
-              type="button"
-              onClick={() => removeAttributePair(index)}
-              className="h-10 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
       </div>
 
       <div>

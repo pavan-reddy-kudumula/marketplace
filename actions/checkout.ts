@@ -7,7 +7,6 @@ import { UserRole } from "@prisma/client";
 interface CheckOutProps {
   id: string;
   quantity: number;
-  selectedAttributes?: Record<string, string>;
 }
 
 interface CheckOutOptions {
@@ -21,18 +20,6 @@ export default async function CheckOut(
   options?: CheckOutOptions,
 ) {
   try {
-        function formatSelectedAttributes(attributes?: Record<string, string>) {
-          if (!attributes || Object.keys(attributes).length === 0) {
-            return "";
-          }
-
-          const formatted = Object.entries(attributes)
-            .map(([key, value]) => `${key.replace(/_/g, " ")}: ${value}`)
-            .join(", ");
-
-          return formatted ? ` (${formatted})` : "";
-        }
-
     const paymentId = options?.paymentId?.trim() || null;
     const phone = options?.phone?.trim() || "";
     const address = options?.address?.trim() || "";
@@ -129,7 +116,7 @@ export default async function CheckOut(
             orderItems: {
               create: storeItems.map((item) => ({
                 productId: item.id,
-                productName: `${productMap[item.id].name}${formatSelectedAttributes(item.selectedAttributes)}`,
+                productName: productMap[item.id].name,
                 price: productMap[item.id].price,
                 quantity: item.quantity,
               })),

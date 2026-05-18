@@ -14,16 +14,13 @@ interface ProductWithStore {
   }
 }
 
-export type SelectedAttributes = Record<string, string>;
-
 interface CartItem extends ProductWithStore{
   quantity: number;
-  selectedAttributes?: SelectedAttributes;
 }
 
 interface CartStore {
   items: CartItem[];
-  addItem: (product: ProductWithStore, selectedAttributes?: SelectedAttributes) => void;
+  addItem: (product: ProductWithStore) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
   updateItemStock: (productId: string, stock: number) => void;
@@ -35,7 +32,7 @@ export const useCart = create<CartStore>()(
     (set) => ({
       items: [],
 
-      addItem: (product, selectedAttributes) =>
+      addItem: (product) =>
         set((state) => {
           if (product.stock <= 0) {
             return state;
@@ -53,7 +50,6 @@ export const useCart = create<CartStore>()(
                     ...item,
                     quantity: Math.min(item.quantity + 1, product.stock),
                     stock: product.stock,
-                    selectedAttributes: selectedAttributes ?? item.selectedAttributes,
                   }
                 : item,
             );
@@ -67,7 +63,6 @@ export const useCart = create<CartStore>()(
                 ...product,
                 quantity: 1,
                 stock: product.stock,
-                selectedAttributes,
               },
             ],
           };

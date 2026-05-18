@@ -99,7 +99,6 @@ model Product {
   stock       Int      @default(0) // Added for inventory management
   images      String[]
   category    String
-  attributes  Json?    // Added for flexible variants (sizes, colors, etc.)
   isArchived  Boolean  @default(false)
 
   storeId     String   @db.ObjectId
